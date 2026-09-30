@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+
+https://unpkg.com/leaflet/dist/leaflet.css
+
+https://unpkg.com/leaflet/dist/leaflet.jsscript>
+
+<style>
+
+html,body{
+margin:0;
+height:100%;
+background:black;
+overflow:hidden;
+}
+
+#map{
+width:100%;
+height:100%;
+}
+
+.radar{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+pointer-events:none;
+}
+
+.label{
+color:#9aff55;
+font-weight:bold;
+font-size:13px;
+text-shadow:0 0 8px #00ff00;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<canvas class="radar" id="radar"></canvas>
+
+<script>
+
+const center=[48.1486,17.1077];
+
+const map=L.map('map',{
+zoomControl:false,
+attributionControl:false
+}).setView(center,9);
+
+L.tileLayer(
+'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+).addTo(map);
+
+L.circle(center,{
+radius:10000,
+color:'#00ff55',
+fill:false
+}).addTo(map);
+
+L.circle(center,{
+radius:20000,
+color:'#00ff55',
+fill:false
+}).addTo(map);
+
+L.circle(center,{
+radius:30000,
+color:'#00ff55',
+fill:false
+}).addTo(map);
+
+let markers=[];
+
+async function loadAircraft(){
+
+markers.forEach(m=>map.removeLayer(m));
+markers=[];
+
+const r=await fetch(
+'https://api.airplanes.live/v2/point/48.1486/17.1077/120'
+);
+
+const data=await r.json();
+
+data.ac.forEach(ac=>{
+
+if(!ac.lat || !ac.lon) return;
+
+const icon=L.divIcon({
+html:`
+<div style="
+color:#ffff55;
+font-size:18px;
+transform:rotate(${ac.track||0}deg);
+">
+✈
+</div>
+`,
+iconSize:[20,20]
+});
+
+const m=L.marker(
+[ac.lat,ac.lon],
+{icon}
+).addTo(map);
+
+m.bindPopup(`
+<b>${ac.flight||ac.hex}</b><br>
+${ac.t||""}<br>
+${Math.round(ac.alt_baro||0)} ft<br>
+${Math.round(ac.gs||0)} kt
+`);
+
+markers.push(m);
+
+});
+
+}
+
+setInterval(loadAircraft,5000);
+
+loadAircraft();
+
+</script>
+
+</body>
+</html>
